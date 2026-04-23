@@ -1,0 +1,8 @@
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: farm-assistant-dynamodb
+    command: -jar DynamoDBLocal.jar -sharedDb -inMemory
+    ports:
+      - "8002:8000"
+    working_dir: /home/dynamodblocal
