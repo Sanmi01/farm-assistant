@@ -80,6 +80,8 @@ def delete_farm(user_id: str, farm_id: str) -> None:
     get_farms_table().delete_item(
         Key={"user_id": user_id, "farm_id": farm_id}
     )
+    from .chat_repo import delete_farm_messages
+    delete_farm_messages(farm_id)
 
 
 def update_farm_fields(user_id: str, farm_id: str, fields: dict) -> Farm:

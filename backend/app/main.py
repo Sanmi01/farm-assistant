@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from .config import get_settings
 from .errors import AppError
 from .logging import get_logger, setup_logging
-from .routes import farms, health
+from .routes import chat, farms, health
 
 settings = get_settings()
 setup_logging(service_name="farm-assistant", log_level=settings.log_level)
@@ -53,3 +53,4 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
 
 app.include_router(health.router)
 app.include_router(farms.router)
+app.include_router(chat.router)

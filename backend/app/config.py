@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     aws_account_id: str = ""
     default_aws_region: str = "us-east-1"
     farms_table_name: str = "farm-assistant-dev-farms"
+    chat_table_name: str = "farm-assistant-dev-chat"
     dynamodb_endpoint_url: str = ""
     aws_access_key_id: str = ""    
     aws_secret_access_key: str = ""

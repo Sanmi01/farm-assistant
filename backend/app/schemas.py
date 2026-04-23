@@ -99,3 +99,25 @@ class AnalysisStatusResponse(BaseModel):
     farm_id: str
     weather_analysis: WeatherAnalysis
     recommendations: Recommendations
+
+# ---- Chat ----
+
+ChatRole = Literal["user", "assistant"]
+
+
+class ChatMessage(BaseModel):
+    id: str
+    farm_id: str
+    user_id: str
+    role: ChatRole
+    content: str
+    created_at: datetime
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+
+
+class ChatHistoryResponse(BaseModel):
+    farm_id: str
+    messages: list[ChatMessage]
