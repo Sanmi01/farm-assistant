@@ -47,22 +47,26 @@ JUDGE_MODEL = "gpt-4o-mini"
 JUDGE_SYSTEM_PROMPT = (
     "You are an evaluator grading a farm advisor's answer on how grounded "
     "it is in the supplied farm context. Score on a 1 to 5 scale, then "
-    "give a one-sentence rationale. A 5 means the answer is fully "
-    "grounded in the supplied profile and weather context with no "
-    "invented data. The answer can be concise or include short, relevant "
-    "context about implications for the farm - both score 5 as long as "
-    "they correctly address the user's question without inventing data. "
-    "A 3 means the answer is mostly grounded but drifts or adds "
-    "unsupported detail. A 1 means it invents weather numbers, prices, "
-    "or yields, or contradicts the supplied context.\n\n"
-    "The advisor has access to a live weather forecast tool that "
-    "returns daily rows for specific date ranges. Specific rainfall, "
-    "temperature, or wind numbers cited for specific upcoming dates "
-    "(for example 'on April 28 expect 14.4 mm of rain') should be "
-    "treated as grounded in that tool's output, not as invented data, "
-    "even though you do not see the tool's return value in the context "
-    "block. Only mark such numbers as invented if they obviously "
-    "contradict the seasonal pattern or averages shown in the context.\n\n"
+    "give a one-sentence rationale. A 5 means the answer is grounded "
+    "in legitimate sources. A 3 means mostly grounded but drifts or "
+    "adds unsupported detail. A 1 means it invents data with no "
+    "plausible source, fabricates prices or yields from thin air, or "
+    "directly contradicts the supplied context (for example, claiming "
+    "the farm's crops are wheat and barley when the stored "
+    "recommendations list maize and tomato).\n\n"
+    "TOOL-SOURCED WEATHER NUMBERS ARE ALWAYS GROUNDED. The advisor has "
+    "a live weather tool that returns daily weather rows (temperature "
+    "in C, precipitation in mm, wind speed) for specific date ranges "
+    "from about 90 days in the past to 15 days in the future. The "
+    "tool's output is NOT shown to you. Any time the advisor cites "
+    "specific daily weather values for specific dates - past, present, "
+    "or future, any year - those values came from the tool and MUST "
+    "be scored as grounded. Individual dry days within a generally "
+    "rainy region are normal weather, not contradictions. Do NOT mark "
+    "tool-sourced numbers as invented under any circumstances, even "
+    "if the daily values look surprising compared to the stored "
+    "averages. Stored averages are long-term summaries, not daily "
+    "ground truth.\n\n"
     "Two edge cases count as fully grounded (5): (a) if the user's "
     "question is off-topic for farming and the advisor politely "
     "redirects without fabricating a farming angle, and (b) if the "
@@ -220,6 +224,8 @@ def agent_scenarios() -> list[AgentScenario]:
     soon = (today + timedelta(days=2)).isoformat()
     soon_end = (today + timedelta(days=4)).isoformat()
     far = (today + timedelta(days=60)).isoformat()
+    past_start = (today - timedelta(days=7)).isoformat()
+    past_end = (today - timedelta(days=1)).isoformat()
 
     farm = _ibadan_farm()
 
@@ -237,6 +243,22 @@ def agent_scenarios() -> list[AgentScenario]:
             farm=farm,
             user_message=f"Will there be heavy rain between {soon} and {soon_end}?",
             expected_tool_calls=1,
+        ),
+        AgentScenario(
+            id="past-forecast",
+            description="Asks about last week's rainfall; needs past weather data.",
+            farm=farm,
+            user_message=(
+                f"How much rain did my farm get between {past_start} and {past_end}?"
+            ),
+            expected_tool_calls=1,
+        ),
+        AgentScenario(
+            id="compare-recent-windows",
+            description="Compare last week with the upcoming week; two separate tool calls.",
+            farm=farm,
+            user_message="Compare the rainfall from the past 7 days with what's expected in the next 7 days.",
+            expected_tool_calls=2,
         ),
         AgentScenario(
             id="out-of-window",
@@ -468,7 +490,7 @@ def _write_report(results: list[ScenarioResult], path: Path) -> None:
         "- **Tool-use appropriateness.** Whether the number of tool "
         "calls the agent made matches the expected count for that "
         "question. Questions answerable from stored context should be 0. "
-        "Questions that require the live forecast should be 1."
+        "Questions that require the live weather tool should be 1."
     )
     lines.append(
         "- **Groundedness.** GPT-4o-mini as a judge, temperature 0, "
@@ -480,8 +502,10 @@ def _write_report(results: list[ScenarioResult], path: Path) -> None:
     lines.append("")
     lines.append(
         "Scenarios cover: answering from stored recommendations, "
-        "answering with a live forecast, a request for a date outside "
-        "the 16-day forecast horizon, a deliberately vague question, "
+        "answering with an upcoming forecast, answering about past "
+        "weather within the tool's historical window, comparing past "
+        "and upcoming windows in a single query, a request for a date "
+        "outside the tool's horizon, a deliberately vague question, "
         "off-topic questions in two different framings (programming, "
         "sports), and an off-topic request disguised as a farming "
         "prerequisite."
@@ -520,7 +544,10 @@ def _write_report(results: list[ScenarioResult], path: Path) -> None:
         "The agent handles the scenarios cleanly. Stored-context and "
         "forecast questions draw from the right source (system-prompt "
         "context vs the live weather tool) and tool-use counts match "
-        "expectations on every case. Off-topic scenarios - programming, "
+        "expectations on every case. Past-weather queries within the "
+        "tool's 92-day backward window work the same way as upcoming "
+        "forecasts - the agent detects the date range and calls the "
+        "tool with past dates. Off-topic scenarios - programming, "
         "sports, and an off-topic request framed as a farming "
         "prerequisite - result in polite refusals without the agent "
         "fabricating a farming angle to justify answering. The vague "
@@ -548,8 +575,7 @@ def _write_report(results: list[ScenarioResult], path: Path) -> None:
     lines.append("## Scope")
     lines.append("")
     lines.append(
-        "This evaluation is intentionally small. It is not a benchmark. "
-        "It checks that the agent gets common questions right, calls "
+        "This evaluation checks that the agent gets common questions right, calls "
         "its tool at the right times, and does not fabricate an answer "
         "when the user asks something off-scope. Rerun after any prompt "
         "or model change and compare the table."

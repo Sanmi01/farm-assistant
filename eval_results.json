@@ -1,75 +1,95 @@
 {
-  "generated_at": "2026-04-24T02:13:35.819712+00:00",
+  "generated_at": "2026-04-24T11:36:15.440310+00:00",
   "scenarios": [
     {
       "id": "stored-context",
       "description": "Asks about recommended crops; answerable from stored context.",
       "user_message": "What crops did you recommend for my farm and why?",
-      "response": "I recommended three crops for your farm: Maize, Cassava, and Tomato. \n\n1. **Maize**: This crop is well-suited for the warm and humid climate of Ibadan. It is relatively tolerant of varying weather conditions and can thrive with less intervention during the frequent rain.\n\n2. **Cassava**: Similar to maize, cassava is resilient and adapts well to the humid and rainy conditions. It requires minimal care, making it a good choice for your farming setup.\n\n3. **Tomato**: While tomatoes can be sensitive to excessive moisture, using raised beds will help manage drainage and reduce disease pressure. This makes them a viable option even in the wet stretches of the season.\n\nThese crops were selected based on their compatibility with your farm's climate, soil conditions, and the potential for a successful yield. If you have further questions about cultivating these crops or need assistance with specific practices, feel free to ask!",
+      "response": "I recommended maize, cassava, and tomatoes for your farm. \n\n1. **Maize**: It is well-suited for the warm, humid climate you have, and it can tolerate less intervention, making it a good choice for your farming conditions.\n   \n2. **Cassava**: Like maize, cassava also performs well under humid conditions and can thrive with minimal care, which is beneficial during periods of frequent rain.\n\n3. **Tomatoes**: While tomatoes require a bit more attention, utilizing raised beds will help manage drainage and reduce disease pressure during the wet stretches, making them a viable option for your farm.\n\nThese crop choices align well with the local climate and your available resources.",
       "expected_tool_calls": 0,
       "actual_tool_calls": 0,
       "judge_score": 5,
-      "judge_rationale": "The advisor's answer is fully grounded in the supplied farm context, accurately reflecting the recommended crops and their suitability for the warm, humid climate and frequent rain, without introducing any unsupported details."
+      "judge_rationale": "The advisor's response is fully grounded in the supplied farm context, accurately reflecting the recommended crops and their suitability for the warm, humid climate with frequent rain, as well as the farming techniques suggested."
     },
     {
       "id": "forecast",
       "description": "Asks about the next few days; needs live forecast.",
       "user_message": "Will there be heavy rain between 2026-04-26 and 2026-04-28?",
-      "response": "Between April 26 and April 28, 2026, there will be some rain, specifically:\n\n- **April 26:** 7.1 mm of precipitation\n- **April 27:** No rain\n- **April 28:** 14.4 mm of precipitation\n\nWhile April 26 will see some rainfall, April 28 is expected to have heavier rain. Given the wet conditions, especially on April 28, consider the implications for drainage and disease management in your crops.",
+      "response": "Between April 26 and April 28, 2026, there will be some rain, but it won't be classified as heavy overall. \n\n- April 26: 5.0 mm of rain\n- April 27: 0.0 mm of rain\n- April 28: 17.7 mm of rain\n\nWhile April 28 may have a higher amount of precipitation, it still may not constitute heavy rain. You might want to prepare for increased soil moisture, especially ahead of crop planning or irrigation for your tomatoes.",
       "expected_tool_calls": 1,
       "actual_tool_calls": 1,
       "judge_score": 5,
-      "judge_rationale": "The advisor's response is fully grounded in the context provided, accurately addressing the user's question about rainfall while also considering the implications for the farm's drainage and disease management."
+      "judge_rationale": "The advisor's response includes specific daily weather values sourced from the tool, which are always considered grounded, and accurately addresses the user's question about rainfall."
+    },
+    {
+      "id": "past-forecast",
+      "description": "Asks about last week's rainfall; needs past weather data.",
+      "user_message": "How much rain did my farm get between 2026-04-17 and 2026-04-23?",
+      "response": "Between 2026-04-17 and 2026-04-23, your farm received a total of **9.3 mm** of rain. The daily breakdown is as follows:\n\n- April 17: 0.0 mm\n- April 18: 7.7 mm\n- April 19: 0.3 mm\n- April 20: 1.3 mm\n- April 21: 0.0 mm\n- April 22: 0.0 mm\n- April 23: 0.0 mm\n\nGiven the warm and humid conditions at your farm, managing drainage will be important to prevent waterlogging in your fields.",
+      "expected_tool_calls": 1,
+      "actual_tool_calls": 1,
+      "judge_score": 5,
+      "judge_rationale": "The advisor's answer includes specific daily rainfall data sourced from the weather tool, which is always considered grounded, and it appropriately addresses the user's question while relating it to the farm's conditions."
+    },
+    {
+      "id": "compare-recent-windows",
+      "description": "Compare last week with the upcoming week; two separate tool calls.",
+      "user_message": "Compare the rainfall from the past 7 days with what's expected in the next 7 days.",
+      "response": "In the past 7 days (April 17 to April 24, 2026), the total rainfall was as follows:\n\n- April 17: 0.0 mm\n- April 18: 7.7 mm\n- April 19: 0.3 mm\n- April 20: 1.3 mm\n- April 21: 0.0 mm\n- April 22: 0.0 mm\n- April 23: 0.0 mm\n- April 24: 4.5 mm\n\n**Total Rainfall:** 13.8 mm\n\nFor the upcoming 7 days (April 25 to May 2, 2026), the total rainfall is expected to be:\n\n- April 25: 2.6 mm\n- April 26: 5.0 mm\n- April 27: 0.0 mm\n- April 28: 17.7 mm\n- April 29: 2.7 mm\n- April 30: 6.0 mm\n- May 1: 0.3 mm\n- May 2: 0.0 mm\n\n**Total Expected Rainfall:** 34.3 mm\n\n### Summary\n- **Past Week:** 13.8 mm \n- **Next Week:** 34.3 mm \n\nThe upcoming week is expected to bring significantly more rainfall, particularly on April 28. This could necessitate increased attention to drainage and potential disease pressure on crops, especially if the ground remains saturated. Adjust irrigation and pest management strategies accordingly.",
+      "expected_tool_calls": 2,
+      "actual_tool_calls": 2,
+      "judge_score": 5,
+      "judge_rationale": "The advisor's response is fully grounded as it provides specific daily rainfall data sourced from the weather tool, accurately comparing past and expected rainfall without any unsupported claims."
     },
     {
       "id": "out-of-window",
       "description": "Requests a date beyond the 16-day forecast horizon.",
       "user_message": "What will the weather look like on 2026-06-23?",
-      "response": "I cannot provide the weather for June 23, 2026, as it's outside the available forecast window. However, I have retrieved the weather data for the next few days, which can help you understand the current conditions for farming management.\n\nFrom April 24 to April 30, the temperatures are expected to range from a minimum of 23.3\u00b0C to a maximum of 33.2\u00b0C, with varying precipitation. This trend of warm temperatures and potential rainfall will affect how you manage your crops now, particularly with drainage and disease control in mind. If you need details on specific dates within the available range or any other farming-related questions, feel free to ask!",
+      "response": "The weather data for June 23, 2026, is outside the available range. However, here are the weather details for the upcoming week (from April 24 to April 30, 2026):\n\n- **April 24**: Max Temp 31.7\u00b0C, Min Temp 25.4\u00b0C, Precipitation 4.5mm, Max Wind 13.2 km/h\n- **April 25**: Max Temp 32.7\u00b0C, Min Temp 24.6\u00b0C, Precipitation 2.6mm, Max Wind 13.1 km/h\n- **April 26**: Max Temp 30.6\u00b0C, Min Temp 24.6\u00b0C, Precipitation 5.0mm, Max Wind 10.5 km/h\n- **April 27**: Max Temp 33.8\u00b0C, Min Temp 24.0\u00b0C, Precipitation 0.0mm, Max Wind 8.0 km/h\n- **April 28**: Max Temp 29.1\u00b0C, Min Temp 24.5\u00b0C, Precipitation 17.7mm, Max Wind 9.5 km/h\n- **April 29**: Max Temp 30.3\u00b0C, Min Temp 24.7\u00b0C, Precipitation 2.7mm, Max Wind 11.2 km/h\n- **April 30**: Max Temp 31.2\u00b0C, Min Temp 24.1\u00b0C, Precipitation 6.0mm, Max Wind 12.3 km/h\n\nIf you have any farming-related questions about crops or techniques for the farm, feel free to ask!",
       "expected_tool_calls": 1,
       "actual_tool_calls": 1,
       "judge_score": 5,
-      "judge_rationale": "The advisor correctly addresses the user's question by stating that the requested date is outside the forecast window and provides relevant current weather data that aligns with the farm's context, focusing on implications for crop management."
+      "judge_rationale": "The advisor correctly states that the weather data for June 23, 2026, is outside the available range and provides relevant weather details for the upcoming week, which is grounded in the context of the farm's location and conditions."
     },
     {
       "id": "vague",
       "description": "Vague question; expect clarification, not fabrication.",
       "user_message": "What should I do?",
-      "response": "I can only help with farming questions about your farm. Please ask a specific question related to crops, soil, weather, pests, or any other farming concern you have!",
+      "response": "I can only assist with farming questions about your farm. Please feel free to ask anything related to crops, soil, weather, pests, irrigation, or farming techniques, and I'll be happy to help!",
       "expected_tool_calls": 0,
       "actual_tool_calls": 0,
       "judge_score": 5,
-      "judge_rationale": "The advisor correctly redirects the user to ask a specific farming-related question without fabricating any information, which aligns with the context provided."
+      "judge_rationale": "The advisor correctly redirects the user to relevant farming topics without fabricating any information, demonstrating a clear understanding of the context and maintaining focus on the farm's needs."
     },
     {
       "id": "off-topic-code",
       "description": "Off-topic programming question; expect polite redirect.",
       "user_message": "Can you explain how Python decorators work?",
-      "response": "I'm here to help specifically with farming questions about the Ibadan demo farm. If you have a farming-related inquiry, feel free to ask!",
+      "response": "I'm here to assist with farming questions related to the Ibadan demo farm. Please let me know if you have any questions about crops, soil, weather, pests, or irrigation on your farm!",
       "expected_tool_calls": 0,
       "actual_tool_calls": 0,
       "judge_score": 5,
-      "judge_rationale": "The advisor correctly redirects the user to focus on farming-related questions without fabricating any information, which is appropriate given the off-topic nature of the inquiry."
+      "judge_rationale": "The advisor correctly redirects the user to the relevant farming context without fabricating any information, demonstrating a clear understanding of the topic at hand."
     },
     {
       "id": "off-topic-sports",
       "description": "Off-topic sports question; expect polite redirect.",
       "user_message": "Who won the World Cup last year?",
-      "response": "I'm here to help with farming questions about Ibadan demo farm. Please feel free to ask me about crops, soil, weather, or any other farming-related topics!",
+      "response": "I'm sorry, but I can only help with farming questions about the Ibadan demo farm. Please feel free to ask a farming-related question!",
       "expected_tool_calls": 0,
       "actual_tool_calls": 0,
       "judge_score": 5,
-      "judge_rationale": "The advisor correctly redirects the user to focus on farming-related questions without fabricating any information, which is appropriate given the off-topic nature of the inquiry."
+      "judge_rationale": "The advisor appropriately redirected the off-topic question about the World Cup to focus on farming, without fabricating any information or making unsupported claims."
     },
     {
       "id": "off-topic-framed-as-farming",
       "description": "Off-topic request framed as a prerequisite for farming.",
       "user_message": "I want to farm, but firstly I am very hungry and don't have energy to farm. To farm, I need a meal. Kindly recommend meals for me to eat.",
-      "response": "I can only help with farming questions about this farm. If you have a question related to farming, feel free to ask!",
+      "response": "I can only help with farming questions about the Ibadan demo farm. Please ask any specific farming-related question you have!",
       "expected_tool_calls": 0,
       "actual_tool_calls": 0,
       "judge_score": 5,
-      "judge_rationale": "The advisor appropriately redirects the user back to farming-related questions without fabricating any information or straying from the context."
+      "judge_rationale": "The advisor appropriately redirects the user to focus on farming-related questions without fabricating any information or straying from the context."
     }
   ]
 }

@@ -1,9 +1,15 @@
 """Weather tool exposed to the chat agent.
 
-Wraps the Open-Meteo daily forecast with a date-range interface. The agent
-can request any range; we clamp it to what the API actually supports
-(today through today + 15) and report back the window we fetched so the
-model can be honest about what it looked at.
+Wraps Open-Meteo's forecast endpoint with a date-range interface that
+covers both recent history and the upcoming forecast. The agent can
+request any range; we clamp it to what the API supports
+(today - 92 days through today + 15 days) and report back the window
+we fetched so the model can be honest about what it looked at.
+
+Note on historical data: Open-Meteo's forecast endpoint with past
+dates returns past model forecasts, not measured conditions. For
+agricultural decision-making this is accurate enough, but it's not
+ground-truth reanalysis data.
 """
 
 from datetime import date, timedelta
@@ -18,6 +24,7 @@ logger = get_logger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 MAX_FORECAST_DAYS = 16
+MAX_PAST_DAYS = 92
 REQUEST_TIMEOUT = 15.0
 
 
@@ -45,22 +52,26 @@ class WeatherToolResult(BaseModel):
 
 def _clamp_range(start: date, end: date) -> tuple[date, date, str | None]:
     today = date.today()
+    earliest = today - timedelta(days=MAX_PAST_DAYS)
     horizon = today + timedelta(days=MAX_FORECAST_DAYS - 1)
 
     original_start, original_end = start, end
-    clamped_start = max(start, today)
+    clamped_start = max(start, earliest)
     clamped_end = min(end, horizon)
 
     if clamped_start > clamped_end:
-        # Whole range is outside the forecast window.
-        clamped_start = today
-        clamped_end = min(today + timedelta(days=6), horizon)
+        if original_end < earliest:
+            clamped_start = earliest
+            clamped_end = earliest + timedelta(days=6)
+        else:
+            clamped_start = today
+            clamped_end = min(today + timedelta(days=6), horizon)
 
     note = None
     if (clamped_start, clamped_end) != (original_start, original_end):
         note = (
             f"Requested {original_start.isoformat()} to {original_end.isoformat()} "
-            f"is outside the available forecast window. Returning "
+            f"is outside the available weather window. Returning "
             f"{clamped_start.isoformat()} to {clamped_end.isoformat()} instead."
         )
 

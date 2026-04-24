@@ -42,22 +42,30 @@ WEATHER_TOOL = {
     "function": {
         "name": "get_weather_forecast",
         "description": (
-            "Fetch daily weather forecast rows for the farm for a specific "
-            "date range. Use this when the user asks about weather on a "
-            "specific day or short window that is not covered by the farm's "
-            "stored 16-day summary. Do not call it for questions that can "
-            "be answered from the stored summary or recommendations."
+            "Fetch daily weather rows for the farm for a specific date "
+            "range. Covers roughly the last 90 days up to about two weeks "
+            "in the future. Use this when the user asks about weather on "
+            "a specific day or short window - past or upcoming - that is "
+            "not already answered by the farm's stored 16-day summary. "
+            "Do not call it for questions about crops, techniques, or "
+            "services that are answerable from the stored recommendations."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "start_date": {
                     "type": "string",
-                    "description": "ISO date YYYY-MM-DD. The first day of the range.",
+                    "description": (
+                        "ISO date YYYY-MM-DD. The first day of the range. "
+                        "May be up to 92 days before today."
+                    ),
                 },
                 "end_date": {
                     "type": "string",
-                    "description": "ISO date YYYY-MM-DD. The last day of the range.",
+                    "description": (
+                        "ISO date YYYY-MM-DD. The last day of the range. "
+                        "May be up to 15 days after today."
+                    ),
                 },
             },
             "required": ["start_date", "end_date"],
@@ -114,7 +122,7 @@ def _build_system_prompt(farm: Farm) -> str:
         "given.\n\n"
         "If the user asks about anything outside that scope - including "
         "meals, cooking, health, legal or financial advice, programming, "
-        "sports, news, or general chit-chat - politely say you can only "
+        "or sports - politely say you can only "
         "help with farming questions about this farm and invite them to "
         "ask one. This rule applies even when the user frames the off-topic "
         "request as a prerequisite for farming (for example 'I need a meal "
@@ -126,6 +134,14 @@ def _build_system_prompt(farm: Farm) -> str:
         "Keep such additions short and tied to the user's question. If the "
         "user asks for something specific and narrow (for example 'just "
         "tell me if it will rain'), match that and do not pad.\n\n"
+        "When a user asks about a specific date that might be outside the "
+        "tool's window, still call the tool. The tool will clamp the range "
+        "to what's available and return a note explaining the clamp. Surface "
+        "that note to the user. Do not pre-refuse date-based questions "
+        "without calling the tool first.\n\n"
+        "For genuinely off-topic questions (meals, sports, code, general "
+        "chit-chat), refuse politely and do not pivot to unrelated "
+        "information the user did not ask for.\n\n"
         f"Farm name: {farm.name}\n"
         f"Location: {location_text} (lat {loc.latitude}, lng {loc.longitude})\n"
         f"Land size: {farm.land_size.value} {farm.land_size.unit}\n"
@@ -133,12 +149,16 @@ def _build_system_prompt(farm: Farm) -> str:
         f"{weather_block}\n"
         f"{recs_block}\n"
         "You have a tool, get_weather_forecast, which fetches daily weather "
-        "rows for a specific date range. Call it only when the user asks "
-        "about a specific day or short window that is not already covered "
-        "by the stored summary. For questions already answerable from the "
-        "stored profile or recommendations, answer directly without any "
-        "tool call. If the tool returns a 'note' explaining the window was "
-        "clamped, state that clearly so the user knows what data you used. "
+        "rows for a specific date range. The range can span roughly the "
+        "last 90 days up to about two weeks in the future. Use it when the "
+        "user asks about weather on a specific day or short window - past "
+        "or upcoming - that the stored 16-day summary does not directly "
+        "answer. Examples: 'will it rain tomorrow', 'how much rain did we "
+        "get last week', 'compare this week's rain to last month's'. For "
+        "questions already answerable from the stored profile or "
+        "recommendations, answer directly without any tool call. If the "
+        "tool returns a 'note' explaining the window was clamped, state "
+        "that clearly so the user knows what data you used. "
         f"Today's date is {date.today().isoformat()}."
     )
 
