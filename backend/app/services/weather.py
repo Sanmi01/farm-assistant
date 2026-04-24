@@ -38,13 +38,19 @@ def _fetch_daily_data(latitude: float, longitude: float) -> dict:
     return response.json()
 
 
-def _average(values: list[float]) -> float:
-    if not values:
+def _clean(values: list) -> list[float]:
+    """Drop None entries and return a list of floats only."""
+    return [v for v in values if v is not None]
+
+
+def _average(values: list) -> float:
+    clean = _clean(values)
+    if not clean:
         return 0.0
-    return sum(values) / len(values)
+    return sum(clean) / len(clean)
 
 
-def _describe_trend(first: list[float], last: list[float]) -> str:
+def _describe_trend(first: list, last: list) -> str:
     if not first or not last:
         return "stable"
     diff = _average(last) - _average(first)
@@ -55,11 +61,12 @@ def _describe_trend(first: list[float], last: list[float]) -> str:
     return "stable"
 
 
-def _describe_rainfall(daily_rain: list[float]) -> str:
-    if not daily_rain:
+def _describe_rainfall(daily_rain: list) -> str:
+    clean = _clean(daily_rain)
+    if not clean:
         return "dry"
-    rainy_days = sum(1 for v in daily_rain if v > 1.0)
-    pct = rainy_days / len(daily_rain)
+    rainy_days = sum(1 for v in clean if v > 1.0)
+    pct = rainy_days / len(clean)
     if pct > 0.5:
         return "frequent rain"
     if pct > 0.2:
@@ -67,7 +74,7 @@ def _describe_rainfall(daily_rain: list[float]) -> str:
     return "dry"
 
 
-def _seasonal_pattern(daily_means: list[float], rain: list[float]) -> str:
+def _seasonal_pattern(daily_means: list, rain: list) -> str:
     if len(daily_means) < 14:
         return "insufficient data for pattern analysis"
 
@@ -93,17 +100,21 @@ def analyze_weather(latitude: float, longitude: float) -> WeatherAnalysis:
     wind = daily.get("wind_speed_10m_max", []) or []
     humidity_hourly = hourly.get("relative_humidity_2m", []) or []
 
-    if not t_max or not t_min:
-        raise ExternalServiceError("Open-Meteo returned no daily data")
-
     daily_means = [
-        (mx + mn) / 2 for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None
+        (mx + mn) / 2
+        for mx, mn in zip(t_max, t_min)
+        if mx is not None and mn is not None
     ]
+
+    if not daily_means:
+        raise ExternalServiceError(
+            "Open-Meteo returned no usable daily temperature data for this location"
+        )
 
     analysis = WeatherAnalysis(
         status="completed",
         average_temperature=round(_average(daily_means), 1),
-        total_precipitation=round(sum(rain), 1),
+        total_precipitation=round(sum(_clean(rain)), 1),
         average_humidity=round(_average(humidity_hourly), 1),
         average_wind_speed=round(_average(wind), 1),
         seasonal_pattern=_seasonal_pattern(daily_means, rain),

@@ -26,10 +26,17 @@ dist/
 *.tfplan
 terraform.tfstate.d/
 *.tfvars.backup
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!terraform.tfvars
+*.tfvars.backup
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
 
 
 !terraform.tfvars
