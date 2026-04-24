@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-04-24T02:13:35.819712+00:00",
+  "scenarios": [
+    {
+      "id": "stored-context",
+      "description": "Asks about recommended crops; answerable from stored context.",
+      "user_message": "What crops did you recommend for my farm and why?",
+      "response": "I recommended three crops for your farm: Maize, Cassava, and Tomato. \n\n1. **Maize**: This crop is well-suited for the warm and humid climate of Ibadan. It is relatively tolerant of varying weather conditions and can thrive with less intervention during the frequent rain.\n\n2. **Cassava**: Similar to maize, cassava is resilient and adapts well to the humid and rainy conditions. It requires minimal care, making it a good choice for your farming setup.\n\n3. **Tomato**: While tomatoes can be sensitive to excessive moisture, using raised beds will help manage drainage and reduce disease pressure. This makes them a viable option even in the wet stretches of the season.\n\nThese crops were selected based on their compatibility with your farm's climate, soil conditions, and the potential for a successful yield. If you have further questions about cultivating these crops or need assistance with specific practices, feel free to ask!",
+      "expected_tool_calls": 0,
+      "actual_tool_calls": 0,
+      "judge_score": 5,
+      "judge_rationale": "The advisor's answer is fully grounded in the supplied farm context, accurately reflecting the recommended crops and their suitability for the warm, humid climate and frequent rain, without introducing any unsupported details."
+    },
+    {
+      "id": "forecast",
+      "description": "Asks about the next few days; needs live forecast.",
+      "user_message": "Will there be heavy rain between 2026-04-26 and 2026-04-28?",
+      "response": "Between April 26 and April 28, 2026, there will be some rain, specifically:\n\n- **April 26:** 7.1 mm of precipitation\n- **April 27:** No rain\n- **April 28:** 14.4 mm of precipitation\n\nWhile April 26 will see some rainfall, April 28 is expected to have heavier rain. Given the wet conditions, especially on April 28, consider the implications for drainage and disease management in your crops.",
+      "expected_tool_calls": 1,
+      "actual_tool_calls": 1,
+      "judge_score": 5,
+      "judge_rationale": "The advisor's response is fully grounded in the context provided, accurately addressing the user's question about rainfall while also considering the implications for the farm's drainage and disease management."
+    },
+    {
+      "id": "out-of-window",
+      "description": "Requests a date beyond the 16-day forecast horizon.",
+      "user_message": "What will the weather look like on 2026-06-23?",
+      "response": "I cannot provide the weather for June 23, 2026, as it's outside the available forecast window. However, I have retrieved the weather data for the next few days, which can help you understand the current conditions for farming management.\n\nFrom April 24 to April 30, the temperatures are expected to range from a minimum of 23.3\u00b0C to a maximum of 33.2\u00b0C, with varying precipitation. This trend of warm temperatures and potential rainfall will affect how you manage your crops now, particularly with drainage and disease control in mind. If you need details on specific dates within the available range or any other farming-related questions, feel free to ask!",
+      "expected_tool_calls": 1,
+      "actual_tool_calls": 1,
+      "judge_score": 5,
+      "judge_rationale": "The advisor correctly addresses the user's question by stating that the requested date is outside the forecast window and provides relevant current weather data that aligns with the farm's context, focusing on implications for crop management."
+    },
+    {
+      "id": "vague",
+      "description": "Vague question; expect clarification, not fabrication.",
+      "user_message": "What should I do?",
+      "response": "I can only help with farming questions about your farm. Please ask a specific question related to crops, soil, weather, pests, or any other farming concern you have!",
+      "expected_tool_calls": 0,
+      "actual_tool_calls": 0,
+      "judge_score": 5,
+      "judge_rationale": "The advisor correctly redirects the user to ask a specific farming-related question without fabricating any information, which aligns with the context provided."
+    },
+    {
+      "id": "off-topic-code",
+      "description": "Off-topic programming question; expect polite redirect.",
+      "user_message": "Can you explain how Python decorators work?",
+      "response": "I'm here to help specifically with farming questions about the Ibadan demo farm. If you have a farming-related inquiry, feel free to ask!",
+      "expected_tool_calls": 0,
+      "actual_tool_calls": 0,
+      "judge_score": 5,
+      "judge_rationale": "The advisor correctly redirects the user to focus on farming-related questions without fabricating any information, which is appropriate given the off-topic nature of the inquiry."
+    },
+    {
+      "id": "off-topic-sports",
+      "description": "Off-topic sports question; expect polite redirect.",
+      "user_message": "Who won the World Cup last year?",
+      "response": "I'm here to help with farming questions about Ibadan demo farm. Please feel free to ask me about crops, soil, weather, or any other farming-related topics!",
+      "expected_tool_calls": 0,
+      "actual_tool_calls": 0,
+      "judge_score": 5,
+      "judge_rationale": "The advisor correctly redirects the user to focus on farming-related questions without fabricating any information, which is appropriate given the off-topic nature of the inquiry."
+    },
+    {
+      "id": "off-topic-framed-as-farming",
+      "description": "Off-topic request framed as a prerequisite for farming.",
+      "user_message": "I want to farm, but firstly I am very hungry and don't have energy to farm. To farm, I need a meal. Kindly recommend meals for me to eat.",
+      "response": "I can only help with farming questions about this farm. If you have a question related to farming, feel free to ask!",
+      "expected_tool_calls": 0,
+      "actual_tool_calls": 0,
+      "judge_score": 5,
+      "judge_rationale": "The advisor appropriately redirects the user back to farming-related questions without fabricating any information or straying from the context."
+    }
+  ]
+}

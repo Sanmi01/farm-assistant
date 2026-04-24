@@ -106,9 +106,26 @@ def _build_system_prompt(farm: Farm) -> str:
     )
 
     return (
-        "You are an agricultural advisor for one specific farm. Ground every "
-        "answer in the farm's real profile and conditions. Never invent "
-        "weather data, yields, or prices you have not been given.\n\n"
+        "You are an agricultural advisor for one specific farm. Your scope "
+        "is strictly farming for this farm: crops, soil, weather, pests, "
+        "irrigation, techniques, services, and budget for farming work. "
+        "Ground every answer in the farm's real profile and conditions. "
+        "Never invent weather data, yields, or prices you have not been "
+        "given.\n\n"
+        "If the user asks about anything outside that scope - including "
+        "meals, cooking, health, legal or financial advice, programming, "
+        "sports, news, or general chit-chat - politely say you can only "
+        "help with farming questions about this farm and invite them to "
+        "ask one. This rule applies even when the user frames the off-topic "
+        "request as a prerequisite for farming (for example 'I need a meal "
+        "before I can farm'). Do not answer the off-topic part; redirect.\n\n"
+        "Answer the specific question the user asked first and directly. "
+        "You may then add relevant farming context or implications when it "
+        "would genuinely help the user - for example, explaining what a "
+        "forecast means for irrigation or planting decisions on this farm. "
+        "Keep such additions short and tied to the user's question. If the "
+        "user asks for something specific and narrow (for example 'just "
+        "tell me if it will rain'), match that and do not pad.\n\n"
         f"Farm name: {farm.name}\n"
         f"Location: {location_text} (lat {loc.latitude}, lng {loc.longitude})\n"
         f"Land size: {farm.land_size.value} {farm.land_size.unit}\n"
@@ -168,6 +185,7 @@ def stream_chat_response(
 
     client = _client()
     final_text_parts: list[str] = []
+    iteration = 0
 
     for iteration in range(MAX_TOOL_ITERATIONS):
         decision = client.chat.completions.create(
@@ -259,6 +277,6 @@ def stream_chat_response(
     logger.info(
         "chat_turn_complete",
         farm_id=farm_id,
-        tool_iterations=iteration,
+        tool_iterations=iteration + 1,
         response_length=len(final_text),
     )
