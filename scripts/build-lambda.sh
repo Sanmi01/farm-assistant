@@ -8,7 +8,14 @@ BUILD_DIR="$BACKEND_DIR/.lambda-build"
 OUTPUT_ZIP="$BACKEND_DIR/lambda-deployment.zip"
 
 echo "==> Cleaning previous build..."
-rm -rf "$BUILD_DIR"
+if [ -d "$BUILD_DIR" ]; then
+    MSYS_NO_PATHCONV=1 docker run --rm \
+        --entrypoint /bin/bash \
+        -v "$BACKEND_DIR:/var/task" \
+        -w /var/task \
+        public.ecr.aws/lambda/python:3.12 \
+        -c "rm -rf /var/task/.lambda-build"
+fi
 rm -f "$OUTPUT_ZIP"
 mkdir -p "$BUILD_DIR"
 
@@ -49,7 +56,14 @@ print(f'Wrote {out}')
 cd "$PROJECT_ROOT"
 
 echo "==> Cleaning build directory..."
-rm -rf "$BUILD_DIR"
+if [ -d "$BUILD_DIR" ]; then
+    MSYS_NO_PATHCONV=1 docker run --rm \
+        --entrypoint /bin/bash \
+        -v "$BACKEND_DIR:/var/task" \
+        -w /var/task \
+        public.ecr.aws/lambda/python:3.12 \
+        -c "rm -rf /var/task/.lambda-build"
+fi
 
 ls -lh "$OUTPUT_ZIP"
 echo "==> Done."
