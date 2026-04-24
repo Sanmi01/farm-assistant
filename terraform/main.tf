@@ -171,7 +171,6 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_s3_object.lambda_zip,
-    aws_cloudfront_distribution.main,
   ]
 }
 
@@ -222,61 +221,6 @@ resource "aws_s3_bucket_policy" "frontend" {
 }
 
 
-resource "aws_cloudfront_distribution" "main" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-  tags                = local.common_tags
-
-  origin {
-    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
-    origin_id   = "S3-${aws_s3_bucket.frontend.id}"
-
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
-  }
-
-  default_cache_behavior {
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.frontend.id}"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  
-  custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-    minimum_protocol_version       = "TLSv1.2_2021"
-  }
-}
-
 
 resource "aws_apigatewayv2_api" "main" {
   name          = "${local.name_prefix}-api-gateway"
@@ -325,4 +269,121 @@ resource "aws_lambda_permission" "api_gw" {
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+
+resource "aws_cloudfront_function" "strip_api_prefix" {
+  name    = "${local.name_prefix}-strip-api-prefix"
+  runtime = "cloudfront-js-2.0"
+  comment = "Strip /api prefix from requests before forwarding to API Gateway"
+  publish = true
+  code    = <<-EOT
+    function handler(event) {
+        var request = event.request;
+        if (request.uri.startsWith('/api/')) {
+            request.uri = request.uri.substring(4);
+        } else if (request.uri === '/api') {
+            request.uri = '/';
+        }
+        return request;
+    }
+  EOT
+}
+
+
+resource "aws_cloudfront_distribution" "main" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  tags                = local.common_tags
+
+  # Origin 1: S3 static site (Next.js export)
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    origin_id   = "S3-${aws_s3_bucket.frontend.id}"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Origin 2: API Gateway (regional HTTP API)
+  origin {
+    domain_name = replace(aws_apigatewayv2_api.main.api_endpoint, "https://", "")
+    origin_id   = "APIGW-${aws_apigatewayv2_api.main.id}"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Default behavior: S3 (static frontend)
+  default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.frontend.id}"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
+  }
+
+  # /api/* behavior: API Gateway, no caching, strip /api prefix, forward auth header
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "APIGW-${aws_apigatewayv2_api.main.id}"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type"]
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_api_prefix.arn
+    }
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  # SPA routing: S3 404s become index.html so Next.js client-side routing works.
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+    minimum_protocol_version       = "TLSv1.2_2021"
+  }
 }
