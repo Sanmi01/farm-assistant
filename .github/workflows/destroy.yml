@@ -1,0 +1,110 @@
+name: Destroy Farm Assistant
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+      confirm:
+        description: 'Type the environment name to confirm destruction'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_WORKSPACE: dev
+  STATE_BUCKET: farm-terraform-state-291661836967
+  STATE_KEY: dev/terraform.tfstate
+  LOCK_TABLE: farm-terraform-locks
+
+jobs:
+  destroy:
+    name: Destroy dev environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify confirmation input matches environment
+        run: |
+          if [ "${{ inputs.confirm }}" != "${{ inputs.environment }}" ]; then
+            echo "::error::Confirmation mismatch. You typed '${{ inputs.confirm }}', expected '${{ inputs.environment }}'."
+            echo "::error::This check prevents accidental destroys. Re-run with the correct environment name."
+            exit 1
+          fi
+          echo "Confirmation OK. Proceeding with destruction of ${{ inputs.environment }}."
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.0
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.STATE_BUCKET }}" \
+            -backend-config="key=${{ env.STATE_KEY }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
+
+      - name: Capture bucket names before destroy
+        id: buckets
+        working-directory: terraform
+        run: |
+          FRONTEND_BUCKET=$(terraform output -raw s3_frontend_bucket 2>/dev/null || echo "")
+          LAMBDA_BUCKET=$(terraform output -raw lambda_artifacts_bucket 2>/dev/null || echo "")
+          echo "frontend_bucket=$FRONTEND_BUCKET" >> "$GITHUB_OUTPUT"
+          echo "lambda_bucket=$LAMBDA_BUCKET" >> "$GITHUB_OUTPUT"
+          echo "Frontend bucket: $FRONTEND_BUCKET"
+          echo "Lambda artifacts bucket: $LAMBDA_BUCKET"
+
+      - name: Empty frontend bucket
+        if: steps.buckets.outputs.frontend_bucket != ''
+        run: |
+          aws s3 rm "s3://${{ steps.buckets.outputs.frontend_bucket }}/" --recursive || true
+
+      - name: Empty lambda artifacts bucket
+        if: steps.buckets.outputs.lambda_bucket != ''
+        run: |
+          aws s3 rm "s3://${{ steps.buckets.outputs.lambda_bucket }}/" --recursive || true
+
+      - name: Terraform destroy
+        working-directory: terraform
+        env:
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_clerk_secret_key: ${{ secrets.CLERK_SECRET_KEY }}
+          TF_VAR_clerk_jwks_url: ${{ secrets.CLERK_JWKS_URL }}
+        run: terraform destroy -auto-approve -input=false
+
+      - name: Print destroy summary
+        run: |
+          echo "## Destroy complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Environment destroyed: ${{ inputs.environment }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Persistent resources NOT destroyed by this workflow:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Terraform state bucket: ${{ env.STATE_BUCKET }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Terraform lock table: ${{ env.LOCK_TABLE }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub OIDC role: github-actions-farm-deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "These survive so you can redeploy with a single push to main." >> "$GITHUB_STEP_SUMMARY"
