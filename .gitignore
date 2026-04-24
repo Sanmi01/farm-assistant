@@ -15,22 +15,38 @@ dist/
 
 # Env
 .env
+.env.*
 .env.local
 .env.example
 
-# AWS / Terraform
-.terraform/
+# Terraform
+**/.terraform/
 *.tfstate
-*.tfstate.backup
-*.tfvars
-!terraform.tfvars.example
+*.tfstate.*
+*.tfplan
+terraform.tfstate.d/
+*.tfvars.backup
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+
+!terraform.tfvars
+!.terraform.lock.hcl
+
+# Lambda build artifacts
+lambda-deployment.zip
+lambda-package/
 lambda_artifacts/
-*.zip
 
 # IDE
 .vscode/
 .idea/
+
+# OS noise
 .DS_Store
+*.swp
 
 # Logs
 *.log

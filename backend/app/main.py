@@ -9,6 +9,11 @@ from .errors import AppError
 from .logging import get_logger, setup_logging
 from .routes import chat, farms, health
 
+import os
+
+_cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+
 settings = get_settings()
 setup_logging(service_name="farm-assistant", log_level=settings.log_level)
 logger = get_logger(__name__)
@@ -29,7 +34,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3000",],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
