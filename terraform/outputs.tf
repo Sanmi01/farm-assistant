@@ -37,3 +37,8 @@ output "s3_frontend_bucket" {
   description = "S3 bucket serving the frontend"
   value       = aws_s3_bucket.frontend.id
 }
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (used for cache invalidation)"
+  value       = aws_cloudfront_distribution.main.id
+}
