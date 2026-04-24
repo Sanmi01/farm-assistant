@@ -79,10 +79,6 @@ jobs:
             -backend-config="dynamodb_table=${{ env.LOCK_TABLE }}" \
             -backend-config="encrypt=true"
 
-      - name: Terraform select workspace
-        working-directory: terraform
-        run: terraform workspace select -or-create ${{ env.TF_WORKSPACE }}
-
       - name: Terraform apply
         working-directory: terraform
         env:
