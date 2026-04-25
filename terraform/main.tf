@@ -2,7 +2,6 @@ data "aws_caller_identity" "current" {}
 
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
-
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
@@ -67,7 +66,6 @@ resource "aws_s3_bucket_public_access_block" "lambda_artifacts" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
 
 resource "aws_s3_object" "lambda_zip" {
   bucket      = aws_s3_bucket.lambda_artifacts.id
@@ -162,8 +160,7 @@ resource "aws_lambda_function" "api" {
       CHAT_TABLE_NAME  = aws_dynamodb_table.chat.name
 
       DYNAMODB_ENDPOINT_URL = ""
-
-      DEFAULT_AWS_REGION = "us-east-1"
+      DEFAULT_AWS_REGION    = "us-east-1"
 
       CORS_ORIGINS = "https://${aws_cloudfront_distribution.main.domain_name},http://localhost:3000"
     }
@@ -174,6 +171,7 @@ resource "aws_lambda_function" "api" {
   ]
 }
 
+# ---- Frontend S3 bucket ----
 
 resource "aws_s3_bucket" "frontend" {
   bucket = "${local.name_prefix}-frontend-${data.aws_caller_identity.current.account_id}"
@@ -220,7 +218,7 @@ resource "aws_s3_bucket_policy" "frontend" {
   depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
 
-
+# ---- API Gateway HTTP API ----
 
 resource "aws_apigatewayv2_api" "main" {
   name          = "${local.name_prefix}-api-gateway"
@@ -271,25 +269,66 @@ resource "aws_lambda_permission" "api_gw" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
-
+# ---- CloudFront Function: routing for both API and frontend ----
+#
+# Same resource name as before. The function body is expanded so it now
+# handles two responsibilities:
+#   1. Strip the /api prefix on requests routed to API Gateway.
+#   2. Rewrite Next.js static-export routes for the S3 origin so that
+#      direct hits and refreshes to /farms, /farms/new, /farms/<id>
+#      resolve to the right exported HTML file rather than falling
+#      through to the SPA index fallback.
 resource "aws_cloudfront_function" "strip_api_prefix" {
   name    = "${local.name_prefix}-strip-api-prefix"
   runtime = "cloudfront-js-2.0"
-  comment = "Strip /api prefix from requests before forwarding to API Gateway"
+  comment = "Routing for /api/* (strip prefix) and Next.js dynamic routes"
   publish = true
   code    = <<-EOT
     function handler(event) {
         var request = event.request;
-        if (request.uri.startsWith('/api/')) {
-            request.uri = request.uri.substring(4);
-        } else if (request.uri === '/api') {
-            request.uri = '/';
+        var uri = request.uri;
+
+        // ---- API Gateway path: strip /api prefix ----
+        if (uri.startsWith('/api/')) {
+            request.uri = uri.substring(4);
+            return request;
         }
+        if (uri === '/api') {
+            request.uri = '/';
+            return request;
+        }
+
+        // ---- S3 static origin: rewrite Next.js routes ----
+
+        // Dynamic farm detail: /farms/<id> -> /farms/[id]/index.html
+        // Excludes /farms/new which is a real exported page.
+        var farmDetail = uri.match(/^\/farms\/([^\/]+)\/?$/);
+        if (farmDetail && farmDetail[1] !== 'new') {
+            request.uri = '/farms/[id]/index.html';
+            return request;
+        }
+
+        // Trailing-slash directories: /farms/ -> /farms/index.html
+        if (uri.endsWith('/') && uri !== '/') {
+            request.uri = uri + 'index.html';
+            return request;
+        }
+
+        // Bare directory paths with no extension and no trailing slash:
+        //   /farms     -> /farms/index.html
+        //   /farms/new -> /farms/new/index.html
+        // Skip files that already have an extension (.js, .css, .svg, etc.)
+        if (uri !== '/' && !uri.includes('.')) {
+            request.uri = uri + '/index.html';
+            return request;
+        }
+
         return request;
     }
   EOT
 }
 
+# ---- CloudFront distribution ----
 
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
@@ -324,6 +363,8 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   # Default behavior: S3 (static frontend)
+  # The routing function rewrites Next.js dynamic routes here so that
+  # refreshes on /farms/<id> resolve to /farms/[id]/index.html.
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
@@ -340,6 +381,11 @@ resource "aws_cloudfront_distribution" "main" {
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_api_prefix.arn
+    }
   }
 
   # /api/* behavior: API Gateway, no caching, strip /api prefix, forward auth header
@@ -375,7 +421,10 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  # SPA routing: S3 404s become index.html so Next.js client-side routing works.
+  # SPA routing fallback: S3 404s for genuinely-missing assets become
+  # index.html so Next.js client-side routing can take over. This is
+  # now a safety net only; the routing function above handles all known
+  # legitimate routes.
   custom_error_response {
     error_code         = 404
     response_code      = 200
