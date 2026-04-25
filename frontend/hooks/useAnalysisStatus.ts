@@ -27,13 +27,6 @@ export function useAnalysisStatus(farmId: string | null) {
     }
   }, [farmId, getToken]);
 
-  const bothDone = (s: AnalysisStatusResponse | null) =>
-    !!s &&
-    (s.weather_analysis.status === "completed" ||
-      s.weather_analysis.status === "failed") &&
-    (s.recommendations.status === "completed" ||
-      s.recommendations.status === "failed");
-
   useEffect(() => {
     isMountedRef.current = true;
     startedAtRef.current = Date.now();
@@ -57,13 +50,6 @@ export function useAnalysisStatus(farmId: string | null) {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchOnce]);
-
-  useEffect(() => {
-    if (bothDone(status) && intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, [status]);
 
   return { status, error, refetch: fetchOnce };
 }

@@ -1,122 +1,180 @@
+import { AlertCircle, RefreshCw, Sparkles } from "lucide-react";
+import { Card } from "@/components/Card";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Tag } from "@/components/Tag";
+import { InfoCard } from "@/components/InfoCard";
+import { LoadingCard } from "@/components/LoadingCard";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { Tooltip } from "@/components/Tooltip";
+import { Button } from "@/components/ui/button";
 import type { Recommendations } from "@/lib/types";
 
-interface Props {
+interface RecommendationsCardProps {
   recommendations: Recommendations;
   onRetry?: () => void;
 }
 
-export function RecommendationsCard({ recommendations, onRetry }: Props) {
-  return (
-    <div className="bg-white rounded-2xl shadow-xl p-6">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-bold text-gray-800">Recommendations</h3>
-        <StatusPill status={recommendations.status} />
-      </div>
+export function RecommendationsCard({
+  recommendations,
+  onRetry,
+}: RecommendationsCardProps) {
+  const status = recommendations.status;
+  const isComplete = status === "completed";
+  const isFailed = status === "failed";
 
-      {recommendations.status === "pending" ||
-      recommendations.status === "processing" ? (
-        <Skeleton />
-      ) : recommendations.status === "failed" ? (
-        <div>
-          <p className="text-sm text-red-600 mb-3">
-            {recommendations.error || "Recommendation generation failed."}
-          </p>
-          {onRetry && (
-            <button
-              onClick={onRetry}
-              className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg"
-            >
-              Retry
-            </button>
+  const statusForBadge = (() => {
+    if (status === "completed") return "success" as const;
+    if (status === "failed") return "error" as const;
+    if (status === "processing") return "info" as const;
+    return "pending" as const;
+  })();
+
+  const formatGeneratedAt = (timestamp: string | null) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    return (
+      date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }) +
+      " at " +
+      date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xl font-semibold text-gray-900">
+            Recommendations
+          </h3>
+          {isComplete && recommendations.generated_at && (
+            <p className="text-sm text-gray-500 mt-1">
+              Generated{" "}
+              {formatGeneratedAt(recommendations.generated_at)}
+            </p>
           )}
         </div>
-      ) : (
-        <div className="space-y-4">
-          <TagList
-            label="Suggested crops"
-            items={recommendations.suggested_crops}
-            tone="emerald"
-          />
-          <TagList
-            label="Farming techniques"
-            items={recommendations.farming_techniques}
-            tone="teal"
-          />
-          <TagList
-            label="Required services"
-            items={recommendations.required_services}
-            tone="amber"
-          />
+        <div className="flex items-center space-x-2 shrink-0">
+          {isComplete && onRetry && (
+            <Tooltip content="Regenerate recommendations using current data">
+              <Button
+                onClick={onRetry}
+                variant="outline"
+                size="sm"
+                className="text-gray-600 hover:text-emerald-700 hover:border-emerald-300"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </Button>
+            </Tooltip>
+          )}
+          <StatusBadge status={statusForBadge}>{status}</StatusBadge>
+        </div>
+      </div>
+
+      {isComplete && (
+        <div className="space-y-6">
+          {recommendations.suggested_crops.length > 0 && (
+            <TagGroup
+              label="Suggested crops"
+              items={recommendations.suggested_crops}
+              variant="emerald"
+            />
+          )}
+
+          {recommendations.farming_techniques.length > 0 && (
+            <TagGroup
+              label="Farming techniques"
+              items={recommendations.farming_techniques}
+              variant="blue"
+            />
+          )}
+
+          {recommendations.required_services.length > 0 && (
+            <TagGroup
+              label="Required services"
+              items={recommendations.required_services}
+              variant="purple"
+            />
+          )}
+
           {recommendations.report && (
-            <div className="pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500 mb-2">Report</p>
-              <p className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">
-                {recommendations.report}
-              </p>
+            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-6 rounded-xl border border-emerald-200">
+              <div className="flex items-center space-x-2 mb-3">
+                <Sparkles className="h-4 w-4 text-emerald-600" />
+                <p className="text-sm font-medium text-gray-900">
+                  AI analysis report
+                </p>
+              </div>
+              <div className="text-gray-800 leading-relaxed">
+                <MarkdownRenderer content={recommendations.report} />
+              </div>
             </div>
           )}
         </div>
       )}
-    </div>
+
+      {isFailed && (
+        <div>
+          <InfoCard
+            icon={AlertCircle}
+            title="Analysis failed"
+            description={
+              recommendations.error || "Recommendations failed to generate."
+            }
+            variant="orange"
+          />
+          {onRetry && (
+            <div className="mt-4">
+              <Button
+                onClick={onRetry}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry recommendations
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(status === "pending" || status === "processing") && (
+        <LoadingCard
+          title={
+            status === "pending"
+              ? "Recommendations queued..."
+              : "Generating recommendations..."
+          }
+          message="This usually takes 5-15 seconds."
+        />
+      )}
+    </Card>
   );
 }
 
-function TagList({
-  label,
-  items,
-  tone,
-}: {
+interface TagGroupProps {
   label: string;
   items: string[];
-  tone: "emerald" | "teal" | "amber";
-}) {
-  const palettes = {
-    emerald: "bg-emerald-100 text-emerald-800",
-    teal: "bg-teal-100 text-teal-800",
-    amber: "bg-amber-100 text-amber-800",
-  };
-  if (items.length === 0) return null;
+  variant: "emerald" | "blue" | "purple";
+}
+
+function TagGroup({ label, items, variant }: TagGroupProps) {
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-2">{label}</p>
+      <p className="text-sm font-medium text-gray-900 mb-3">{label}</p>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
-          <span
-            key={item}
-            className={`text-xs px-3 py-1 rounded-full ${palettes[tone]}`}
-          >
+          <Tag key={item} variant={variant}>
             {item}
-          </span>
+          </Tag>
         ))}
       </div>
     </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div className="space-y-3 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-1/3" />
-      <div className="flex gap-2">
-        <div className="h-6 bg-gray-200 rounded-full w-16" />
-        <div className="h-6 bg-gray-200 rounded-full w-20" />
-        <div className="h-6 bg-gray-200 rounded-full w-14" />
-      </div>
-      <div className="h-20 bg-gray-200 rounded" />
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: Recommendations["status"] }) {
-  const palette: Record<Recommendations["status"], string> = {
-    pending: "bg-gray-100 text-gray-600",
-    processing: "bg-amber-100 text-amber-700",
-    completed: "bg-emerald-100 text-emerald-700",
-    failed: "bg-red-100 text-red-700",
-  };
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full ${palette[status]}`}>
-      {status}
-    </span>
   );
 }

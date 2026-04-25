@@ -1,3 +1,5 @@
+import { FormField } from "@/components/FormField";
+
 interface Step1Props {
   name: string;
   onChange: (name: string) => void;
@@ -6,22 +8,28 @@ interface Step1Props {
 
 export function Step1Name({ name, onChange, error }: Step1Props) {
   return (
-    <div>
-      <h3 className="text-xl font-semibold mb-2 text-gray-800">
-        What do you want to call this farm?
-      </h3>
-      <p className="text-gray-500 mb-6">
-        A short name that helps you tell your farms apart.
-      </p>
-      <input
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+          What do you want to call this farm?
+        </h2>
+        <p className="text-base text-gray-600">
+          A short name that helps you tell your farms apart.
+        </p>
+      </div>
+
+      <FormField
+        label="Farm name"
+        name="name"
         type="text"
+        placeholder="e.g. Alabi Farms"
         value={name}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="e.g. Alabi Farms"
+        error={error}
+        required
         maxLength={100}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+        inputClassName="text-lg"
       />
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
     </div>
   );
 }

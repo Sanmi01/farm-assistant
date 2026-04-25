@@ -1,43 +1,70 @@
+import { cn } from "@/lib/utils";
+
 interface ProgressBarProps {
-  current: number;
-  total: number;
+  currentStep: number;
+  totalSteps: number;
+  showStepNumbers?: boolean;
   labels?: string[];
+  className?: string;
 }
 
-export function ProgressBar({ current, total, labels }: ProgressBarProps) {
+export function ProgressBar({
+  currentStep,
+  totalSteps,
+  showStepNumbers = true,
+  labels,
+  className,
+}: ProgressBarProps) {
+  const percentage = (currentStep / totalSteps) * 100;
+
   return (
-    <div className="mb-8">
-      <div className="flex justify-between items-center mb-2">
-        {Array.from({ length: total }).map((_, i) => {
-          const step = i + 1;
-          const done = step < current;
-          const active = step === current;
-          return (
-            <div key={step} className="flex-1 flex flex-col items-center">
+    <div className={cn("w-full", className)}>
+      {showStepNumbers && (
+        <div className="flex items-center justify-between mb-4">
+          {Array.from({ length: totalSteps }).map((_, i) => {
+            const step = i + 1;
+            const isDone = step < currentStep;
+            const isActive = step === currentStep;
+            return (
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  done
-                    ? "bg-emerald-600 text-white"
-                    : active
-                    ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-600"
-                    : "bg-gray-100 text-gray-400"
-                }`}
+                key={step}
+                className="flex flex-col items-center flex-1 first:items-start last:items-end"
               >
-                {done ? "✓" : step}
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200",
+                    isDone && "bg-emerald-600 text-white",
+                    isActive &&
+                      "bg-emerald-100 text-emerald-700 border-2 border-emerald-600",
+                    !isDone &&
+                      !isActive &&
+                      "bg-gray-200 text-gray-500",
+                  )}
+                >
+                  {isDone ? "✓" : step}
+                </div>
+                {labels?.[i] && (
+                  <span
+                    className={cn(
+                      "text-xs mt-2 text-center",
+                      isActive
+                        ? "text-emerald-700 font-medium"
+                        : "text-gray-500",
+                    )}
+                  >
+                    {labels[i]}
+                  </span>
+                )}
               </div>
-              {labels?.[i] && (
-                <span className="text-xs mt-1 text-gray-500 text-center">
-                  {labels[i]}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div className="relative h-1 bg-gray-200 rounded">
+            );
+          })}
+        </div>
+      )}
+
+      <div className="w-full bg-gray-200 rounded-full h-2">
         <div
-          className="absolute top-0 left-0 h-1 bg-emerald-600 rounded transition-all"
-          style={{ width: `${((current - 1) / (total - 1)) * 100}%` }}
+          className="bg-emerald-600 h-2 rounded-full transition-all duration-500"
+          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>

@@ -2,6 +2,8 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { ArrowLeft, Loader2, Sprout } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Step1Name } from "@/components/wizard/Step1Name";
 import { Step2Location } from "@/components/wizard/Step2Location";
@@ -54,10 +56,15 @@ export default function NewFarmPage() {
         next[2] = "Both latitude and longitude are required.";
         ok = false;
       } else if (
-        latitude < -90 || latitude > 90 ||
-        longitude < -180 || longitude > 180
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
       ) {
         next[2] = "Coordinates are out of valid range.";
+        ok = false;
+      } else if (latitude === 0 && longitude === 0) {
+        next[2] = "Coordinates (0, 0) is not a valid farm location.";
         ok = false;
       } else {
         next[2] = undefined;
@@ -112,32 +119,44 @@ export default function NewFarmPage() {
 
   if (!isLoaded || !isSignedIn) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
         <p className="text-gray-500">Loading...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100">
-      <div className="container mx-auto px-4 py-12">
-        <nav className="mb-8">
-          <Link href="/farms" className="text-sm text-gray-600 hover:underline">
-            ← Back to farms
-          </Link>
-        </nav>
+    <main className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 py-8">
+      <nav className="bg-white/80 backdrop-blur-lg border-b border-emerald-100 mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <Link href="/" className="flex items-center space-x-2">
+              <Sprout className="h-7 w-7 text-emerald-600" />
+              <span className="text-xl font-semibold text-gray-900">
+                Farm Assistant
+              </span>
+            </Link>
+            <Link
+              href="/farms"
+              className="flex items-center space-x-1 text-sm text-gray-600 hover:text-emerald-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to farms</span>
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">
-            Register a farm
-          </h1>
-          <p className="text-gray-500 mb-6">
-            Four quick steps. Each one has validation before you can move on.
-          </p>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ProgressBar
+          currentStep={currentStep}
+          totalSteps={4}
+          labels={STEP_LABELS}
+          className="mb-8"
+        />
 
-          <ProgressBar current={currentStep} total={4} labels={STEP_LABELS} />
-
-          <div className="min-h-[260px] mb-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-100 p-8 shadow-xl">
+          <div className="min-h-[320px] mb-8">
             {currentStep === 1 && (
               <Step1Name
                 name={name}
@@ -184,29 +203,40 @@ export default function NewFarmPage() {
           )}
 
           <div className="flex justify-between">
-            <button
+            <Button
+              type="button"
               onClick={goBack}
               disabled={isFirst || submitting}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-40"
+              variant="ghost"
+              className="text-gray-600 hover:text-gray-900"
             >
               Back
-            </button>
+            </Button>
             {!isLast ? (
-              <button
+              <Button
+                type="button"
                 onClick={goNext}
                 disabled={submitting}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+                className="bg-emerald-600 hover:bg-emerald-700 px-8"
               >
-                Next
-              </button>
+                Continue
+              </Button>
             ) : (
-              <button
+              <Button
+                type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60"
+                className="bg-emerald-600 hover:bg-emerald-700 px-8"
               >
-                {submitting ? "Creating..." : "Create farm"}
-              </button>
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Creating farm...</span>
+                  </>
+                ) : (
+                  "Create farm"
+                )}
+              </Button>
             )}
           </div>
         </div>
