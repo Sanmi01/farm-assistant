@@ -7,6 +7,10 @@ locals {
     Environment = var.environment
     ManagedBy   = "terraform"
   }
+
+  lambda_zip_path   = "${path.module}/../backend/lambda-deployment.zip"
+  lambda_zip_exists = fileexists(local.lambda_zip_path)
+  lambda_zip_hash   = local.lambda_zip_exists ? filebase64sha256(local.lambda_zip_path) : "missing"
 }
 
 # ---- DynamoDB tables ----
@@ -69,9 +73,9 @@ resource "aws_s3_bucket_public_access_block" "lambda_artifacts" {
 
 resource "aws_s3_object" "lambda_zip" {
   bucket      = aws_s3_bucket.lambda_artifacts.id
-  key         = "lambda-deployment-${filebase64sha256("${path.module}/../backend/lambda-deployment.zip")}.zip"
-  source      = "${path.module}/../backend/lambda-deployment.zip"
-  source_hash = filebase64sha256("${path.module}/../backend/lambda-deployment.zip")
+  key         = "lambda-deployment-${local.lambda_zip_hash}.zip"
+  source      = local.lambda_zip_path
+  source_hash = local.lambda_zip_hash
   tags        = local.common_tags
 }
 
@@ -129,6 +133,21 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   })
 }
 
+# ---- CloudWatch log groups (explicit, with bounded retention) ----
+
+
+resource "aws_cloudwatch_log_group" "lambda" {
+  name              = "/aws/lambda/${local.name_prefix}-api"
+  retention_in_days = 30
+  tags              = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway_access" {
+  name              = "/aws/apigateway/${local.name_prefix}-access"
+  retention_in_days = 30
+  tags              = local.common_tags
+}
+
 # ---- Lambda function ----
 
 resource "aws_lambda_function" "api" {
@@ -137,7 +156,7 @@ resource "aws_lambda_function" "api" {
   function_name    = "${local.name_prefix}-api"
   role             = aws_iam_role.lambda_role.arn
   handler          = "lambda_handler.handler"
-  source_code_hash = filebase64sha256("${path.module}/../backend/lambda-deployment.zip")
+  source_code_hash = local.lambda_zip_hash
   runtime          = "python3.12"
   architectures    = ["x86_64"]
   timeout          = var.lambda_timeout
@@ -168,6 +187,7 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_s3_object.lambda_zip,
+    aws_cloudwatch_log_group.lambda,
   ]
 }
 
@@ -239,6 +259,22 @@ resource "aws_apigatewayv2_stage" "default" {
   default_route_settings {
     throttling_burst_limit = var.api_throttle_burst_limit
     throttling_rate_limit  = var.api_throttle_rate_limit
+  }
+
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway_access.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      httpMethod     = "$context.httpMethod"
+      path           = "$context.path"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+      latencyMs      = "$context.responseLatency"
+      sourceIp       = "$context.identity.sourceIp"
+      userAgent      = "$context.identity.userAgent"
+      requestTime    = "$context.requestTime"
+    })
   }
 }
 
