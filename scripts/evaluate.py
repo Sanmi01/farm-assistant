@@ -103,6 +103,8 @@ def judge_groundedness(context: str, question: str, answer: str) -> JudgeResult:
         ],
         response_format=JudgeResult,
         temperature=0,
+        metadata={"purpose": "judge"},
+        store=True,
     )
 
     parsed = completion.choices[0].message.parsed

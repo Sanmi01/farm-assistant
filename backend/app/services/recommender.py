@@ -100,6 +100,8 @@ def generate_recommendations(farm: Farm) -> Recommendations:
                 {"role": "user", "content": _user_prompt(farm)},
             ],
             response_format=RecommendationSchema,
+            metadata={"purpose": "recommender", "farm_id": farm.id},
+            store=True,
         )
     except Exception as exc:
         logger.error("recommender_failed", error=str(exc))

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from .config import get_settings
 from .errors import AppError
 from .logging import get_logger, setup_logging
+from .middleware import request_id_middleware
 from .routes import chat, farms, health
 
 import os
@@ -31,6 +32,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+app.middleware("http")(request_id_middleware)
 
 app.add_middleware(
     CORSMiddleware,

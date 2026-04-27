@@ -222,6 +222,8 @@ def stream_chat_response(
             messages=messages,
             tools=[WEATHER_TOOL],
             tool_choice="auto",
+            metadata={"purpose": "agent_detect", "farm_id": farm_id},
+            store=True,
         )
         choice = decision.choices[0]
 
@@ -277,6 +279,8 @@ def stream_chat_response(
             tools=[WEATHER_TOOL],
             tool_choice="none",
             stream=True,
+            metadata={"purpose": "agent_detect", "farm_id": farm_id},
+            store=True,
         )
         for chunk in stream:
             delta = chunk.choices[0].delta
